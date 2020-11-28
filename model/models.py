@@ -112,6 +112,11 @@ def DRL_prediction(df,
 
     ## trading env
     trade_data = data_split(df, start=unique_trade_date[iter_num - rebalance_window], end=unique_trade_date[iter_num])
+    print("salam")
+    print("tradeData",trade_data)
+    print("start",unique_trade_date[iter_num - rebalance_window])
+    print("end",unique_trade_date[iter_num])
+
     env_trade = DummyVecEnv([lambda: StockEnvTrade(trade_data,
                                                    turbulence_threshold=turbulence_threshold,
                                                    initial=initial,
@@ -140,12 +145,12 @@ def DRL_validation(model, test_data, test_env, test_obs) -> None:
 
 
 def get_validation_sharpe(iteration):
-    ###Calculate Sharpe ratio based on validation results###
+    ###Calcula_csv('results/account_value_validation_{}.csv'.te Sharpe ratio based on validation results###
     df_total_value = pd.read_csv('results/account_value_validation_{}.csv'.format(iteration), index_col=0)
     df_total_value.columns = ['account_value_train']
     df_total_value['daily_return'] = df_total_value.pct_change(1)
     sharpe = (4 ** 0.5) * df_total_value['daily_return'].mean() / \
-             df_total_value['daily_return'].std()
+             (df_total_value['daily_return'].std()+0.000000001)
     return sharpe
 
 
@@ -164,12 +169,13 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
 
     # based on the analysis of the in-sample data
     #turbulence_threshold = 140
-    insample_turbulence = df[(df.datadate<20151000) & (df.datadate>=20090000)]
+    insample_turbulence = df[(df.datadate<"20201020") & (df.datadate>="20201001")]
     insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
-    insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
-
+    #insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
+    insample_turbulence_threshold = 0
     start = time.time()
     for i in range(rebalance_window + validation_window, len(unique_trade_date), rebalance_window):
+        print("a new iteration, Iteration #",i,", last iteration will be ",len(unique_trade_date))
         print("============================================")
         ## initial state is empty
         if i - rebalance_window - validation_window == 0:
@@ -201,12 +207,16 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         else:
             # if the mean of the historical data is less than the 90% quantile of insample turbulence data
             # then we tune up the turbulence_threshold, meaning we lower the risk
-            turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
+            turbulence_threshold = 0
+            #turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
         print("turbulence_threshold: ", turbulence_threshold)
 
         ############## Environment Setup starts ##############
         ## training env
-        train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
+        train = data_split(df, start="2017-07-14", end=unique_trade_date[i - rebalance_window - validation_window])
+        print("df",df)
+        print("train",train)
+        print("end",unique_trade_date[i - rebalance_window - validation_window])
         env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
 
         ## validation env

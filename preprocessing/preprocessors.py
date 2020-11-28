@@ -31,16 +31,8 @@ def calcualte_price(df):
     :return: (df) pandas dataframe
     """
     data = df.copy()
-    data = data[['datadate', 'tic', 'prccd', 'ajexdi', 'prcod', 'prchd', 'prcld', 'cshtrd']]
-    data['ajexdi'] = data['ajexdi'].apply(lambda x: 1 if x == 0 else x)
-
-    data['adjcp'] = data['prccd'] / data['ajexdi']
-    data['open'] = data['prcod'] / data['ajexdi']
-    data['high'] = data['prchd'] / data['ajexdi']
-    data['low'] = data['prcld'] / data['ajexdi']
-    data['volume'] = data['cshtrd']
-
-    data = data[['datadate', 'tic', 'adjcp', 'open', 'high', 'low', 'volume']]
+    data = data[['timestamp', 'tic', 'close', 'open', 'high', 'low', 'volume']]
+    data=data.rename(columns={'timestamp': 'datadate'})
     data = data.sort_values(['tic', 'datadate'], ignore_index=True)
     return data
 
@@ -53,7 +45,7 @@ def add_technical_indicator(df):
     """
     stock = Sdf.retype(df.copy())
 
-    stock['close'] = stock['adjcp']
+    stock['close'] = stock['close']
     unique_ticker = stock.tic.unique()
 
     macd = pd.DataFrame()
@@ -95,7 +87,7 @@ def preprocess_data():
 
     df = load_dataset(file_name=config.TRAINING_DATA_FILE)
     # get data after 2009
-    df = df[df.datadate>=20090000]
+    #df = df[df.datadate>=20090000]
     # calcualte adjusted price
     df_preprocess = calcualte_price(df)
     # add technical indicators using stockstats
@@ -121,10 +113,10 @@ def calcualte_turbulence(df):
     """calculate turbulence index based on dow 30"""
     # can add other market assets
     
-    df_price_pivot=df.pivot(index='datadate', columns='tic', values='adjcp')
+    df_price_pivot=df.pivot(index='datadate', columns='tic', values='close')
     unique_date = df.datadate.unique()
     # start after a year
-    start = 252
+    start = 0
     turbulence_index = [0]*start
     #turbulence_index = [0]
     count=0

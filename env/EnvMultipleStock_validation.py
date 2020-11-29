@@ -14,7 +14,7 @@ HMAX_NORMALIZE = 100
 # initial amount of money we have in our account
 INITIAL_ACCOUNT_BALANCE=1000000
 # total number of stocks in our portfolio
-STOCK_DIM = 30
+STOCK_DIM = 1
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
 
@@ -35,19 +35,19 @@ class StockEnvValidation(gym.Env):
         self.action_space = spaces.Box(low = -1, high = 1,shape = (STOCK_DIM,)) 
         # Shape = 181: [Current Balance]+[prices 1-30]+[owned shares 1-30] 
         # +[macd 1-30]+ [rsi 1-30] + [cci 1-30] + [adx 1-30]
-        self.observation_space = spaces.Box(low=0, high=np.inf, shape = (181,))
+        self.observation_space = spaces.Box(low=0, high=np.inf, shape = (7,))
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day,:]
         self.terminal = False     
         self.turbulence_threshold = turbulence_threshold
         # initalize state
         self.state = [INITIAL_ACCOUNT_BALANCE] + \
-                      self.data.adjcp.values.tolist() + \
+                      [self.data.close] + \
                       [0]*STOCK_DIM + \
-                      self.data.macd.values.tolist() + \
-                      self.data.rsi.values.tolist() + \
-                      self.data.cci.values.tolist() + \
-                      self.data.adx.values.tolist()
+                      [self.data.macd] + \
+                      [self.data.rsi] + \
+                      [self.data.cci] + \
+                      [self.data.adx]
         # initialize reward
         self.reward = 0
         self.turbulence = 0
@@ -119,6 +119,7 @@ class StockEnvValidation(gym.Env):
             plt.savefig('results/account_value_validation_{}.png'.format(self.iteration))
             plt.close()
             df_total_value = pd.DataFrame(self.asset_memory)
+            print("at the step and trying to write account_value_validation in iteration #",self.iteration)
             df_total_value.to_csv('results/account_value_validation_{}.csv'.format(self.iteration))
             end_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
@@ -132,7 +133,7 @@ class StockEnvValidation(gym.Env):
             df_total_value.columns = ['account_value']
             df_total_value['daily_return']=df_total_value.pct_change(1)
             sharpe = (4**0.5)*df_total_value['daily_return'].mean()/ \
-                  df_total_value['daily_return'].std()
+                  (df_total_value['daily_return'].std()+0.000000001)
             #print("Sharpe: ",sharpe)
             
             #df_rewards = pd.DataFrame(self.rewards_memory)
@@ -170,18 +171,20 @@ class StockEnvValidation(gym.Env):
 
             self.day += 1
             self.data = self.df.loc[self.day,:]         
-            self.turbulence = self.data['turbulence'].values[0]
+            print("all self.data['turbulence']",self.data['turbulence'])
+            self.turbulence = self.data['turbulence']
             #print(self.turbulence)
             #load next state
             # print("stock_shares:{}".format(self.state[29:]))
             self.state =  [self.state[0]] + \
-                    self.data.adjcp.values.tolist() + \
+                    [self.data.close] + \
                     list(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]) + \
-                    self.data.macd.values.tolist() + \
-                    self.data.rsi.values.tolist() + \
-                    self.data.cci.values.tolist() + \
-                    self.data.adx.values.tolist()
-            
+                      [self.data.macd] + \
+                      [self.data.rsi] + \
+                      [self.data.cci] + \
+                      [self.data.adx]
+            print("self state in val env is ",self.state)
+
             end_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
             self.asset_memory.append(end_total_asset)
@@ -207,13 +210,13 @@ class StockEnvValidation(gym.Env):
         self.rewards_memory = []
         #initiate state
         self.state = [INITIAL_ACCOUNT_BALANCE] + \
-                      self.data.adjcp.values.tolist() + \
+                      [self.data.close] + \
                       [0]*STOCK_DIM + \
-                      self.data.macd.values.tolist() + \
-                      self.data.rsi.values.tolist()  + \
-                      self.data.cci.values.tolist()  + \
-                      self.data.adx.values.tolist() 
-            
+                      [self.data.macd] + \
+                      [self.data.rsi] + \
+                      [self.data.cci] + \
+                      [self.data.adx]
+
         return self.state
     
     def render(self, mode='human',close=False):

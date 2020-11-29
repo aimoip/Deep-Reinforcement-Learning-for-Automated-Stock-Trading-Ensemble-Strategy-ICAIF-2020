@@ -112,10 +112,10 @@ def DRL_prediction(df,
 
     ## trading env
     trade_data = data_split(df, start=unique_trade_date[iter_num - rebalance_window], end=unique_trade_date[iter_num])
-    print("salam")
-    print("tradeData",trade_data)
-    print("start",unique_trade_date[iter_num - rebalance_window])
-    print("end",unique_trade_date[iter_num])
+    #print("salam")
+    #print("tradeData",trade_data)
+    #print("start",unique_trade_date[iter_num - rebalance_window])
+    #print("end",unique_trade_date[iter_num])
 
     env_trade = DummyVecEnv([lambda: StockEnvTrade(trade_data,
                                                    turbulence_threshold=turbulence_threshold,
@@ -172,7 +172,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     insample_turbulence = df[(df.datadate<"20201020") & (df.datadate>="20201001")]
     insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
     #insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
-    insample_turbulence_threshold = 0
+    insample_turbulence_threshold = 140
     start = time.time()
     for i in range(rebalance_window + validation_window, len(unique_trade_date), rebalance_window):
         print("a new iteration, Iteration #",i,", last iteration will be ",len(unique_trade_date))
@@ -207,16 +207,16 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         else:
             # if the mean of the historical data is less than the 90% quantile of insample turbulence data
             # then we tune up the turbulence_threshold, meaning we lower the risk
-            turbulence_threshold = 0
+            turbulence_threshold = 140
             #turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
         print("turbulence_threshold: ", turbulence_threshold)
 
         ############## Environment Setup starts ##############
         ## training env
         train = data_split(df, start="2017-07-14", end=unique_trade_date[i - rebalance_window - validation_window])
-        print("df",df)
-        print("train",train)
-        print("end",unique_trade_date[i - rebalance_window - validation_window])
+        #print("df",df)
+        #print("train",train)
+        #print("end",unique_trade_date[i - rebalance_window - validation_window])
         env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
 
         ## validation env
@@ -229,12 +229,12 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         ############## Environment Setup ends ##############
 
         ############## Training and Validation starts ##############
-        print("======Model training from: ", 20090000, "to ",
+        print("======Model training from: ", "2017-07-14", "to ",
               unique_trade_date[i - rebalance_window - validation_window])
         # print("training: ",len(data_split(df, start=20090000, end=test.datadate.unique()[i-rebalance_window]) ))
         # print("==============Model Training===========")
         print("======A2C Training========")
-        model_a2c = train_A2C(env_train, model_name="A2C_30k_dow_{}".format(i), timesteps=30000)
+        model_a2c = train_A2C(env_train, model_name="A2C_30k_dow_{}".format(i), timesteps=200000)
         print("======A2C Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
               unique_trade_date[i - rebalance_window])
         DRL_validation(model=model_a2c, test_data=validation, test_env=env_val, test_obs=obs_val)
@@ -242,7 +242,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         print("A2C Sharpe Ratio: ", sharpe_a2c)
 
         print("======PPO Training========")
-        model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=100000)
+        model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=200000)
         print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
               unique_trade_date[i - rebalance_window])
         DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
@@ -250,7 +250,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         print("PPO Sharpe Ratio: ", sharpe_ppo)
 
         print("======DDPG Training========")
-        model_ddpg = train_DDPG(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=10000)
+        model_ddpg = train_DDPG(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=200000)
         #model_ddpg = train_TD3(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=20000)
         print("======DDPG Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
               unique_trade_date[i - rebalance_window])
